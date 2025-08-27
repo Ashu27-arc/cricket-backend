@@ -1,6 +1,28 @@
 # 🏏 Cricket Backend API
 
-Node.js Express server with MongoDB for cricket scoring system with real-time WebSocket updates and AI commentary generation.
+Node.js Express server with MongoDB and Redis for cricket scoring system with real-time WebSocket updates, auto-incrementing match IDs, and comprehensive commentary system.
+
+## ✨ New Features
+
+### 🆔 Auto-Incrementing Match IDs
+- **4-digit unique match IDs** starting from 1000
+- **Easy sharing** and reference
+- **Database-backed counter** system
+
+### 📝 Ball-by-Ball Commentary
+- **Structured commentary** with event types
+- **Real-time updates** via WebSocket
+- **Comprehensive event tracking** (runs, wickets, extras)
+
+### ⚡ Redis Caching
+- **Fast data retrieval** with Redis caching
+- **Real-time commentary** storage
+- **Graceful fallback** to MongoDB
+
+### 🔴 Enhanced Real-time Updates
+- **Match-specific rooms** for targeted updates
+- **Commentary broadcasting** to all viewers
+- **Status change notifications**
 
 ## 🚀 Quick Start
 
@@ -10,64 +32,245 @@ npm install
 
 # Setup environment
 cp .env.example .env
-# Edit .env with your MongoDB URI
+# Edit .env with your MongoDB URI and Redis URL
 
 # Start development server
 npm run dev
+
+# Test the new endpoints
+npm run test:endpoints
 
 # Start production server
 npm start
 ```
 
-## 📡 API Endpoints
+## 📡 Complete API Documentation
 
-### Match Management
-- `POST /api/matches` - Create new match
-- `GET /api/matches` - List all matches (recent first)
-- `GET /api/matches/:id` - Get specific match by ID
+### Base URL
+`http://localhost:5000/api`
+
+### Enhanced Match Management Endpoints
+
+#### 1. Start Match
+**POST** `/matches/start`
+
+Start a new cricket match with auto-generated 4-digit match ID.
+
+**Request Body:**
+```json
+{
+  "teamA": "Mumbai Indians",
+  "teamB": "Chennai Super Kings", 
+  "overs": 20,
+  "tossWinner": "Mumbai Indians",
+  "tossDecision": "bat"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "matchId": "1001",
+  "match": {
+    "matchId": "1001",
+    "teamA": "Mumbai Indians",
+    "teamB": "Chennai Super Kings",
+    "status": "live",
+    "fullMatchJSON": {...}
+  }
+}
+```
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:5000/api/matches/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "teamA": "Mumbai Indians",
+    "teamB": "Chennai Super Kings",
+    "overs": 20,
+    "tossWinner": "Mumbai Indians",
+    "tossDecision": "bat"
+  }'
+```
+
+#### 2. Add Commentary
+**POST** `/matches/:id/commentary`
+
+Add ball-by-ball commentary for a specific match.
+
+**Request Body:**
+```json
+{
+  "over": 1,
+  "ball": 1,
+  "eventType": "four",
+  "runs": 4,
+  "description": "Beautiful cover drive for four!",
+  "batsman": "Rohit Sharma",
+  "bowler": "Deepak Chahar",
+  "extras": {
+    "wide": 0,
+    "noBall": 0,
+    "bye": 0,
+    "legBye": 0
+  }
+}
+```
+
+**Event Types:**
+- `run` - Regular runs
+- `wicket` - Wicket taken
+- `wide` - Wide ball
+- `no-ball` - No ball
+- `bye` - Bye runs
+- `leg-bye` - Leg bye runs
+- `dot` - Dot ball
+- `four` - Boundary (4 runs)
+- `six` - Six runs
+- `maiden` - Maiden over
+
+**Response:**
+```json
+{
+  "success": true,
+  "commentary": {
+    "matchId": "1001",
+    "over": 1,
+    "ball": 1,
+    "eventType": "four",
+    "runs": 4,
+    "description": "Beautiful cover drive for four!",
+    "timestamp": "2025-08-27T10:30:00.000Z"
+  }
+}
+```
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:5000/api/matches/1001/commentary \
+  -H "Content-Type: application/json" \
+  -d '{
+    "over": 1,
+    "ball": 1,
+    "eventType": "four",
+    "runs": 4,
+    "description": "Beautiful cover drive for four!",
+    "batsman": "Rohit Sharma",
+    "bowler": "Deepak Chahar"
+  }'
+```
+
+#### 3. Get Match Details
+**GET** `/matches/:id`
+
+Get complete match information including commentary.
+
+**Response:**
+```json
+{
+  "success": true,
+  "match": {
+    "matchId": "1001",
+    "teamA": "Mumbai Indians",
+    "teamB": "Chennai Super Kings",
+    "status": "live",
+    "runs": 45,
+    "wickets": 2,
+    "fullMatchJSON": {...}
+  },
+  "commentary": [
+    {
+      "over": 1,
+      "ball": 1,
+      "eventType": "four",
+      "runs": 4,
+      "description": "Beautiful cover drive for four!"
+    }
+  ],
+  "totalCommentary": 15
+}
+```
+
+**cURL Example:**
+```bash
+curl http://localhost:5000/api/matches/1001
+```
+
+#### 4. Get Live Matches
+**GET** `/matches/live`
+
+Get all currently live matches.
+
+**Response:**
+```json
+{
+  "success": true,
+  "matches": [
+    {
+      "matchId": "1001",
+      "teamA": "Mumbai Indians",
+      "teamB": "Chennai Super Kings",
+      "status": "live",
+      "runs": 45,
+      "wickets": 2
+    }
+  ],
+  "count": 1
+}
+```
+
+**cURL Example:**
+```bash
+curl http://localhost:5000/api/matches/live
+```
+
+#### 5. Update Match Status
+**PUT** `/matches/:id/status`
+
+Update match status (upcoming, live, completed).
+
+**Request Body:**
+```json
+{
+  "status": "completed",
+  "fullMatchJSON": {...}
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "match": {
+    "matchId": "1001",
+    "status": "completed",
+    ...
+  }
+}
+```
+
+### Legacy Endpoints (Backward Compatibility)
+- `POST /api/matches` - Create new match (legacy)
+- `GET /api/matches/all` - List all matches (recent first)
 - `PUT /api/matches/:id` - Update match (triggers live updates)
 - `DELETE /api/matches/:id` - Delete match
 
-### Example API Usage
+### Error Responses
 
-#### Create Match
-```bash
-curl -X POST http://localhost:5000/api/matches \
-  -H "Content-Type: application/json" \
-  -d '{
-    "fullMatchJSON": {
-      "teamA": "India",
-      "teamB": "Australia",
-      "batting": "India",
-      "overs": 20,
-      "runs": 0,
-      "wickets": 0
-    },
-    "teamA": "India",
-    "teamB": "Australia",
-    "batting": "India",
-    "overs": 20
-  }'
+All endpoints return consistent error format:
+```json
+{
+  "message": "Error description",
+  "error": "Detailed error message"
+}
 ```
 
-#### Get All Matches
-```bash
-curl http://localhost:5000/api/matches
-```
-
-#### Update Match (with live updates)
-```bash
-curl -X PUT http://localhost:5000/api/matches/MATCH_ID \
-  -H "Content-Type: application/json" \
-  -d '{
-    "fullMatchJSON": { /* updated match state */ },
-    "lastBall": {
-      "runs": 4,
-      "isWicket": false,
-      "batsmanOnStrike": "Batter 1"
-    }
-  }'
-```
+**Common HTTP Status Codes:**
+- `400` - Bad Request (missing required fields)
+- `404` - Not Found (match doesn't exist)
+- `500` - Internal Server Error
 
 ## 🔌 WebSocket Events
 
@@ -81,14 +284,28 @@ const io = socketIo(server, {
 });
 ```
 
-### Client Events (Received)
+### Client Events (Send to Server)
 - `join-match` - Join match room for live updates
 - `leave-match` - Leave match room
+- `join-live-matches` - Join live matches room
+- `leave-live-matches` - Leave live matches room
 
-### Server Events (Emitted)
-- `match-update` - Real-time score updates with commentary
-- `over-completed` - Over completion notifications
-- `innings-ended` - Innings end notifications
+### Server Events (Receive from Server)
+- `match-started` - New match started notification
+- `commentary-update` - Real-time commentary updates
+- `match-status-update` - Match status changes
+- `joined-match` - Confirmation of joining match room
+
+### Match ID System
+- **Auto-incrementing 4-digit match IDs** starting from 1000
+- **Unique across all matches**
+- **Easy reference and sharing**
+
+### Redis Caching Features
+- **Match data cached** for 1 hour
+- **Commentary cached** as lists for quick retrieval
+- **Automatic cache invalidation** on updates
+- **Graceful fallback** to MongoDB if Redis unavailable
 
 ### WebSocket Usage Example
 ```javascript
@@ -108,6 +325,7 @@ socket.on('match-update', (data) => {
 ### Match Model
 ```javascript
 const MatchSchema = new Schema({
+  matchId: { type: String, unique: true, required: true, index: true }, // 4-digit unique ID
   teamA: { type: String, required: true, trim: true },
   teamB: { type: String, required: true, trim: true },
   batting: { type: String, required: true, trim: true },
@@ -116,9 +334,35 @@ const MatchSchema = new Schema({
   wickets: { type: Number, default: 0 },
   ballCount: { type: Number, default: 0 },
   isInningsOver: { type: Boolean, default: false },
+  status: { type: String, enum: ['upcoming', 'live', 'completed'], default: 'upcoming' },
   fullMatchJSON: { type: Schema.Types.Mixed, required: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
+});
+```
+
+### Commentary Model
+```javascript
+const CommentarySchema = new Schema({
+  matchId: { type: String, required: true, index: true },
+  over: { type: Number, required: true },
+  ball: { type: Number, required: true },
+  eventType: { type: String, required: true, enum: ['run', 'wicket', 'wide', 'no-ball', 'bye', 'leg-bye', 'dot', 'four', 'six', 'maiden'] },
+  runs: { type: Number, default: 0 },
+  description: { type: String, required: true },
+  batsman: { type: String },
+  bowler: { type: String },
+  extras: { wide: Number, noBall: Number, bye: Number, legBye: Number },
+  wicketDetails: { type: String, fielder: String },
+  timestamp: { type: Date, default: Date.now }
+});
+```
+
+### Counter Model (Auto-incrementing IDs)
+```javascript
+const CounterSchema = new Schema({
+  _id: { type: String, required: true },
+  sequence_value: { type: Number, default: 1000 } // Start from 1000 for 4-digit IDs
 });
 ```
 
@@ -193,14 +437,36 @@ Create `.env` file in backend root:
 ```bash
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/cricket_scoring
+REDIS_URL=redis://localhost:6379
 NODE_ENV=development
 ```
 
-For production (MongoDB Atlas):
+For production:
 ```bash
 PORT=5000
 MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/cricket_scoring?retryWrites=true&w=majority
+REDIS_URL=redis://username:password@redis-host:6379
 NODE_ENV=production
+```
+
+## 🔴 Redis Integration
+
+### Features
+- **Match Caching**: Fast retrieval of match data
+- **Commentary Caching**: Real-time commentary storage
+- **Auto-expiration**: Automatic cache cleanup
+- **Fallback**: Graceful degradation if Redis unavailable
+
+### Redis Usage
+```javascript
+// Cache match data
+await redisClient.setEx(`match:${matchId}`, 3600, JSON.stringify(match));
+
+// Cache commentary
+await redisClient.lPush(`commentary:${matchId}`, JSON.stringify(commentary));
+
+// Retrieve cached data
+const cachedMatch = await redisClient.get(`match:${matchId}`);
 ```
 
 ## 🏗️ Project Structure
@@ -208,19 +474,26 @@ NODE_ENV=production
 ```
 cricket-backend/
 ├── config/
-│   └── db.js                    # MongoDB connection
+│   ├── db.js                    # MongoDB connection
+│   └── redis.js                 # Redis connection
 ├── controllers/
-│   └── matchController.js       # Match CRUD operations
+│   ├── matchController.js       # Legacy match operations
+│   └── enhancedMatchController.js # Enhanced match & commentary
 ├── models/
-│   └── Match.js                 # MongoDB match schema
+│   ├── Match.js                 # MongoDB match schema
+│   ├── Commentary.js            # Commentary schema
+│   └── Counter.js               # Auto-increment counter
 ├── routes/
 │   └── matches.js               # API route definitions
 ├── utils/
 │   ├── commentaryGenerator.js   # AI commentary system
+│   ├── matchIdGenerator.js      # Auto-increment match IDs
 │   └── validateObjectId.js      # Input validation
 ├── .env                         # Environment variables
 ├── .env.example                 # Environment template
+├── test-endpoints.js            # API testing script
 ├── package.json                 # Dependencies and scripts
+├── README.md                    # Complete documentation with API reference
 └── server.js                    # Main server file
 ```
 
@@ -237,19 +510,21 @@ cricket-backend/
 ### Core Dependencies
 ```json
 {
-  "express": "^4.18.2",
-  "mongoose": "^8.0.0",
-  "socket.io": "^4.7.2",
+  "express": "^5.1.0",
+  "mongoose": "^8.18.0",
+  "socket.io": "^4.8.1",
+  "redis": "^4.6.13",
   "cors": "^2.8.5",
-  "dotenv": "^16.3.1",
-  "morgan": "^1.10.0"
+  "dotenv": "^17.2.1",
+  "morgan": "^1.10.1"
 }
 ```
 
 ### Development Dependencies
 ```json
 {
-  "nodemon": "^3.0.1"
+  "nodemon": "^3.1.10",
+  "axios": "^1.6.0"
 }
 ```
 

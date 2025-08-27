@@ -52,12 +52,27 @@ io.on('connection', (socket) => {
     socket.on('join-match', (matchId) => {
         socket.join(`match-${matchId}`);
         console.log(`User ${socket.id} joined match ${matchId}`);
+        
+        // Send current match status to newly joined user
+        socket.emit('joined-match', { matchId, message: 'Successfully joined match room' });
     });
     
     // Leave match room
     socket.on('leave-match', (matchId) => {
         socket.leave(`match-${matchId}`);
         console.log(`User ${socket.id} left match ${matchId}`);
+    });
+    
+    // Join all live matches room for general updates
+    socket.on('join-live-matches', () => {
+        socket.join('live-matches');
+        console.log(`User ${socket.id} joined live matches room`);
+    });
+    
+    // Leave live matches room
+    socket.on('leave-live-matches', () => {
+        socket.leave('live-matches');
+        console.log(`User ${socket.id} left live matches room`);
     });
     
     socket.on('disconnect', () => {

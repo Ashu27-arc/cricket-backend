@@ -3,6 +3,11 @@ const Match = require('../models/Match');
 const isValidObjectId = require('../utils/validateObjectId');
 const { generateCommentary, generateOverSummary, generateInningsEndCommentary } = require('../utils/commentaryGenerator');
 
+// Helper function to generate unique 4-digit match ID
+function generateMatchId() {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
 async function createMatch(req, res) {
     try {
         const payload = req.body;
@@ -12,7 +17,20 @@ async function createMatch(req, res) {
         }
 
         const top = payload.fullMatchJSON;
+        
+        // Generate unique matchId
+        let matchId;
+        let isUnique = false;
+        while (!isUnique) {
+            matchId = generateMatchId();
+            const existingMatch = await Match.findOne({ matchId });
+            if (!existingMatch) {
+                isUnique = true;
+            }
+        }
+
         const doc = new Match({
+            matchId,
             teamA: top.teamA || payload.teamA || 'Team A',
             teamB: top.teamB || payload.teamB || 'Team B',
             batting: top.batting || payload.batting || 'Team A',
