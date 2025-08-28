@@ -18,10 +18,7 @@ async function createMatch(req, res) {
 
         const top = payload.fullMatchJSON;
         
-        // Delete all previous matches when creating a new one
-        // This ensures only the latest match is shown
-        await Match.deleteMany({});
-        console.log('Deleted all previous matches before creating new match');
+        // Keep all matches in database for history
         
         // Generate unique matchId
         let matchId;
