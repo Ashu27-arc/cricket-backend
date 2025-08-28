@@ -24,7 +24,8 @@ router.put('/:id/status', enhancedMatchCtrl.updateMatchStatus);
 // Create: save a match
 router.post('/', matchCtrl.createMatch);
 
-// List all (recent)
+// List all (recent) - both endpoints for compatibility
+router.get('/', matchCtrl.listMatches);
 router.get('/all', matchCtrl.listMatches);
 
 // Update match (replace)
